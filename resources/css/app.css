@@ -1,0 +1,11 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+img.lazy-img { opacity: 0; transition: opacity 0.3s ease; }
+img.lazy-img.loaded { opacity: 1; }
+img.lazy-img:not(.loaded) { animation: skeleton-pulse 1.5s ease-in-out infinite; }
+@keyframes skeleton-pulse { 0%,100% { background-color: #f3f4f6; } 50% { background-color: #e5e7eb; } }
+.attendance-card { touch-action: manipulation; -webkit-tap-highlight-color: transparent; user-select: none; }
+.attendance-card:active .aspect-square { transform: scale(0.94); transition: transform 0.08s ease; }
+#attendance-grid { padding-bottom: 5rem; }
