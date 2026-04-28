@@ -116,7 +116,7 @@ async function loadStudents() {
     document.getElementById('grid-error').classList.add('hidden');
     document.getElementById('attendance-grid').classList.add('hidden');
     try {
-        const res  = await fetch(STUDENTS_URL,{headers:{'Accept':'application/json','X-CSRF-TOKEN':CSRF}});
+        const res  = await silentFetch(STUDENTS_URL,{headers:{'Accept':'application/json','X-CSRF-TOKEN':CSRF}});
         if (!res.ok) throw new Error();
         const data = await res.json();
         attendanceMap = data.attendance || {};
@@ -207,7 +207,7 @@ async function flushSaveQueue() {
 
     try {
         const saves = Object.entries(queue).map(([id,status]) =>
-            fetch(SAVE_SINGLE,{method:'POST',headers:{'Content-Type':'application/json','X-CSRF-TOKEN':CSRF,'Accept':'application/json'},body:JSON.stringify({student_id:parseInt(id),status})}).then(r=>r.json())
+            silentFetch(SAVE_SINGLE,{method:'POST',headers:{'Content-Type':'application/json','X-CSRF-TOKEN':CSRF,'Accept':'application/json'},body:JSON.stringify({student_id:parseInt(id),status})}).then(r=>r.json())
         );
         const results = await Promise.all(saves);
         const last = results[results.length-1];

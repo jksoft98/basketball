@@ -106,7 +106,7 @@ const CSRF = document.querySelector('meta[name="csrf-token"]').content;
 // Live refresh today's sessions every 60 seconds
 async function refreshTodaySessions() {
     try {
-        const res  = await fetch("{{ route('dashboard.today-sessions') }}", {headers:{'Accept':'application/json','X-CSRF-TOKEN':CSRF}});
+        const res  = await silentFetch("{{ route('dashboard.today-sessions') }}", {headers:{'Accept':'application/json','X-CSRF-TOKEN':CSRF}});
         const data = await res.json();
         data.sessions.forEach(session => {
             const row  = document.querySelector(`[data-session="${session.id}"]`);
