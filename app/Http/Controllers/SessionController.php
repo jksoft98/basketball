@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Batch;
 use App\Models\TrainingSession;
+use App\Services\SessionGeneratorService;  // ← ADD THIS LINE
 use Illuminate\Http\Request;
 
 class SessionController extends Controller
@@ -152,5 +153,27 @@ class SessionController extends Controller
         if (auth()->user()->isAdmin()) return;
         $ownBatchIds = Batch::where('coach_id', auth()->id())->pluck('id');
         if (!$ownBatchIds->contains($session->batch_id)) abort(403);
+    }
+
+    public function generate(Request $request)
+    {
+        $request->validate([
+            'from'     => 'required|date',
+            'to'       => 'required|date|after_or_equal:from',
+            'batch_id' => 'nullable|exists:batches,id',
+        ]);
+
+        $result = app(SessionGeneratorService::class)->generateForPeriod(
+            \Carbon\Carbon::parse($request->from),
+            \Carbon\Carbon::parse($request->to),
+            $request->batch_id ?: null
+        );
+
+        return response()->json([
+            'success' => true,
+            'message' => "Generated {$result['created']} sessions, {$result['skipped']} already existed.",
+            'created' => $result['created'],
+            'skipped' => $result['skipped'],
+        ]);
     }
 }

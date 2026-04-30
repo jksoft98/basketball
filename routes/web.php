@@ -38,6 +38,8 @@ Route::middleware(['auth'])->group(function () {
     Route::patch('students/{student}/injury-status', [StudentController::class, 'updateInjuryStatus'])->name('students.injury-status');
 
     // Sessions
+    Route::post('sessions/generate', [SessionController::class, 'generate'])
+     ->name('sessions.generate');
     Route::resource('sessions', SessionController::class);
     Route::patch('sessions/{session}/notes', [SessionController::class, 'updateNotes'])->name('sessions.update-notes');
 
@@ -52,6 +54,8 @@ Route::middleware(['auth'])->group(function () {
         [AttendanceController::class, 'store'])->name('attendance.store')->middleware('throttle:attendance-save');
     Route::patch('sessions/{session}/attendance/mark-all',
         [AttendanceController::class, 'markAll'])->name('attendance.mark-all');
+
+  
 
     // Reports (admin only)
     Route::middleware([\App\Http\Middleware\RoleMiddleware::class.':admin'])->group(function () {

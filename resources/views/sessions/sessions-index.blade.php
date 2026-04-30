@@ -71,107 +71,62 @@
 
 {{-- ── Auto-generate Modal ──────────────────────────────────────── --}}
 <div id="generate-modal"
-     style="display:none; position:fixed; inset:0; z-index:9999;
-            background:rgba(0,0,0,0.45);
-            align-items:center; justify-content:center; padding:16px;">
+     class="hidden fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl border border-gray-200 w-full max-w-sm shadow-xl">
 
-    <div style="background:#fff; border-radius:12px; border:1px solid #e5e7eb;
-                width:100%; max-width:440px; box-shadow:0 20px 60px rgba(0,0,0,0.15);
-                overflow:hidden;">
-
-        {{-- Header --}}
-        <div style="display:flex; align-items:flex-start; justify-content:space-between;
-                    padding:18px 20px 14px; border-bottom:1px solid #f3f4f6;">
+        {{-- Modal header --}}
+        <div class="flex items-center justify-between px-6 pt-5 pb-4 border-b border-gray-100">
             <div>
-                <p style="font-size:15px; font-weight:600; color:#111827; margin:0;">
-                    ⚡ Auto-generate Sessions
-                </p>
-                <p style="font-size:12px; color:#9ca3af; margin:4px 0 0;">
+                <h2 class="text-base font-semibold text-gray-900">Auto-generate Sessions</h2>
+                <p class="text-xs text-gray-400 mt-0.5">
                     Creates sessions from each batch's weekly schedule
                 </p>
             </div>
             <button onclick="closeGenerateModal()"
-                    style="background:none; border:none; cursor:pointer; padding:2px 6px;
-                           font-size:20px; color:#9ca3af; line-height:1; border-radius:6px;"
-                    onmouseover="this.style.color='#374151';this.style.background='#f3f4f6'"
-                    onmouseout="this.style.color='#9ca3af';this.style.background='none'">
-                ×
-            </button>
+                    class="text-gray-400 hover:text-gray-600 text-xl leading-none">×</button>
         </div>
 
-        {{-- Body --}}
-        <div style="padding:18px 20px; display:flex; flex-direction:column; gap:14px;">
+        {{-- Modal body --}}
+        <div class="px-6 py-5 space-y-4">
 
             {{-- Quick presets --}}
             <div>
-                <p style="font-size:11px; font-weight:500; color:#6b7280;
-                           text-transform:uppercase; letter-spacing:.04em; margin:0 0 8px;">
-                    Quick select
-                </p>
-                <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:6px;">
-                    <button type="button" id="preset-this-week"
-                            onclick="setPreset('this-week', this)"
-                            style="height:32px; font-size:12px; font-weight:500;
-                                   border:1px solid #e5e7eb; border-radius:8px;
-                                   background:#fff; color:#374151; cursor:pointer;
-                                   transition:all .15s;">
+                <label class="block text-xs font-medium text-gray-600 mb-2">Quick select</label>
+                <div class="grid grid-cols-3 gap-2">
+                    <button type="button" onclick="setPreset('this-week')"
+                            class="preset-btn h-8 text-xs border border-gray-200 rounded-lg hover:border-orange-400 hover:text-orange-600 transition-colors">
                         This week
                     </button>
-                    <button type="button" id="preset-next-week"
-                            onclick="setPreset('next-week', this)"
-                            style="height:32px; font-size:12px; font-weight:500;
-                                   border:1px solid #e5e7eb; border-radius:8px;
-                                   background:#fff; color:#374151; cursor:pointer;
-                                   transition:all .15s;">
+                    <button type="button" onclick="setPreset('next-week')"
+                            class="preset-btn h-8 text-xs border border-gray-200 rounded-lg hover:border-orange-400 hover:text-orange-600 transition-colors">
                         Next week
                     </button>
-                    <button type="button" id="preset-this-month"
-                            onclick="setPreset('this-month', this)"
-                            style="height:32px; font-size:12px; font-weight:500;
-                                   border:1px solid #e5e7eb; border-radius:8px;
-                                   background:#fff; color:#374151; cursor:pointer;
-                                   transition:all .15s;">
+                    <button type="button" onclick="setPreset('this-month')"
+                            class="preset-btn h-8 text-xs border border-gray-200 rounded-lg hover:border-orange-400 hover:text-orange-600 transition-colors">
                         This month
                     </button>
                 </div>
             </div>
 
             {{-- Date range --}}
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+            <div class="grid grid-cols-2 gap-3">
                 <div>
-                    <label style="display:block; font-size:11px; font-weight:500;
-                                  color:#6b7280; margin-bottom:5px;">From</label>
+                    <label class="block text-xs font-medium text-gray-600 mb-1.5">From</label>
                     <input type="date" id="gen-from"
-                           style="width:100%; height:36px; padding:0 10px; font-size:13px;
-                                  border:1px solid #e5e7eb; border-radius:8px;
-                                  background:#fff; color:#111827; outline:none; box-sizing:border-box;"
-                           onfocus="this.style.borderColor='#f97316'"
-                           onblur="this.style.borderColor='#e5e7eb'">
+                           class="w-full h-9 px-3 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:border-orange-400">
                 </div>
                 <div>
-                    <label style="display:block; font-size:11px; font-weight:500;
-                                  color:#6b7280; margin-bottom:5px;">To</label>
+                    <label class="block text-xs font-medium text-gray-600 mb-1.5">To</label>
                     <input type="date" id="gen-to"
-                           style="width:100%; height:36px; padding:0 10px; font-size:13px;
-                                  border:1px solid #e5e7eb; border-radius:8px;
-                                  background:#fff; color:#111827; outline:none; box-sizing:border-box;"
-                           onfocus="this.style.borderColor='#f97316'"
-                           onblur="this.style.borderColor='#e5e7eb'">
+                           class="w-full h-9 px-3 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:border-orange-400">
                 </div>
             </div>
 
-            {{-- Batch --}}
+            {{-- Batch filter --}}
             <div>
-                <label style="display:block; font-size:11px; font-weight:500;
-                               color:#6b7280; margin-bottom:5px;">
-                    Batch <span style="color:#9ca3af; font-weight:400;">(optional)</span>
-                </label>
+                <label class="block text-xs font-medium text-gray-600 mb-1.5">Batch (optional)</label>
                 <select id="gen-batch"
-                        style="width:100%; height:36px; padding:0 10px; font-size:13px;
-                               border:1px solid #e5e7eb; border-radius:8px;
-                               background:#fff; color:#111827; outline:none; cursor:pointer;"
-                        onfocus="this.style.borderColor='#f97316'"
-                        onblur="this.style.borderColor='#e5e7eb'">
+                        class="w-full h-9 px-3 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:border-orange-400">
                     <option value="">All batches with schedules</option>
                     @foreach($batches as $b)
                     <option value="{{ $b->id }}">
@@ -187,30 +142,21 @@
             </div>
 
             {{-- Result message --}}
-            <div id="gen-result" style="display:none; font-size:13px;
-                 padding:10px 12px; border-radius:8px;"></div>
+            <div id="gen-result" class="hidden text-sm px-3 py-2.5 rounded-lg"></div>
 
             {{-- Per-batch detail --}}
-            <div id="gen-details" style="display:none;"></div>
+            <div id="gen-details" class="hidden space-y-1.5"></div>
         </div>
 
-        {{-- Footer --}}
-        <div style="display:flex; gap:8px; padding:0 20px 18px;">
+        {{-- Modal footer --}}
+        <div class="flex gap-3 px-6 pb-5">
             <button onclick="generateSessions()" id="gen-btn"
-                    style="flex:1; height:38px; background:#f97316; color:#fff;
-                           border:none; border-radius:8px; font-size:13px;
-                           font-weight:600; cursor:pointer; transition:background .15s;"
-                    onmouseover="this.style.background='#ea580c'"
-                    onmouseout="this.style.background='#f97316'">
+                    class="flex-1 h-9 bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                 Generate
             </button>
             <button onclick="closeGenerateModal()"
-                    style="height:38px; padding:0 16px; background:#fff;
-                           border:1px solid #e5e7eb; border-radius:8px;
-                           font-size:13px; color:#6b7280; cursor:pointer; transition:all .15s;"
-                    onmouseover="this.style.background='#f9fafb'"
-                    onmouseout="this.style.background='#fff'">
-                Cancel
+                    class="h-9 px-4 border border-gray-200 text-gray-600 text-sm rounded-lg hover:bg-gray-50 transition-colors">
+                Close
             </button>
         </div>
     </div>
@@ -307,17 +253,15 @@ function dtDeleteSession(id, btn) {
 }
 
 // ── Generate modal ───────────────────────────────────────────────
-// Open / close
 function openGenerateModal() {
-    document.getElementById('gen-result').style.display = 'none';
-    document.getElementById('gen-details').style.display = 'none';
-    const modal = document.getElementById('generate-modal');
-    modal.style.display = 'flex';
-    setPreset('next-week', document.getElementById('preset-next-week'));
+    setPreset('this-week'); // default to this week
+    document.getElementById('gen-result').classList.add('hidden');
+    document.getElementById('gen-details').classList.add('hidden');
+    document.getElementById('generate-modal').classList.remove('hidden');
 }
 
 function closeGenerateModal() {
-    document.getElementById('generate-modal').style.display = 'none';
+    document.getElementById('generate-modal').classList.add('hidden');
 }
 
 // Close on backdrop click
@@ -325,23 +269,19 @@ document.getElementById('generate-modal').addEventListener('click', function(e) 
     if (e.target === this) closeGenerateModal();
 });
 
-// Preset buttons
-function setPreset(preset, btn) {
+// Date presets
+function setPreset(preset) {
     const today  = new Date();
+    const monday = d => { const day = d.getDay(); const diff = d.getDate() - day + (day === 0 ? -6 : 1); return new Date(d.setDate(diff)); };
     const fmt    = d => d.toISOString().split('T')[0];
-    const monday = d => {
-        const day  = new Date(d);
-        const diff = day.getDate() - day.getDay() + (day.getDay() === 0 ? -6 : 1);
-        return new Date(day.setDate(diff));
-    };
 
     let from, to;
 
     if (preset === 'this-week') {
-        from = monday(today);
+        from = monday(new Date(today));
         to   = new Date(from); to.setDate(to.getDate() + 6);
     } else if (preset === 'next-week') {
-        from = monday(today); from.setDate(from.getDate() + 7);
+        from = monday(new Date(today)); from.setDate(from.getDate() + 7);
         to   = new Date(from); to.setDate(to.getDate() + 6);
     } else if (preset === 'this-month') {
         from = new Date(today.getFullYear(), today.getMonth(), 1);
@@ -351,80 +291,79 @@ function setPreset(preset, btn) {
     document.getElementById('gen-from').value = fmt(from);
     document.getElementById('gen-to').value   = fmt(to);
 
-    // Highlight active preset
-    ['preset-this-week', 'preset-next-week', 'preset-this-month'].forEach(id => {
-        const b = document.getElementById(id);
-        b.style.background   = '#fff';
-        b.style.color        = '#374151';
-        b.style.borderColor  = '#e5e7eb';
+    // Highlight active preset button
+    document.querySelectorAll('.preset-btn').forEach(b => {
+        b.classList.remove('border-orange-400', 'text-orange-600', 'bg-orange-50');
+        b.classList.add('border-gray-200');
     });
-    if (btn) {
-        btn.style.background  = '#fff7ed';
-        btn.style.color       = '#c2410c';
-        btn.style.borderColor = '#f97316';
-    }
+    event.currentTarget?.classList.add('border-orange-400', 'text-orange-600', 'bg-orange-50');
+    event.currentTarget?.classList.remove('border-gray-200');
 }
 
-// Generate
+// Generate sessions via AJAX
 async function generateSessions() {
-    const btn     = document.getElementById('gen-btn');
-    const result  = document.getElementById('gen-result');
+    const btn    = document.getElementById('gen-btn');
+    const result = document.getElementById('gen-result');
     const details = document.getElementById('gen-details');
-    const from    = document.getElementById('gen-from').value;
-    const to      = document.getElementById('gen-to').value;
-    const batch   = document.getElementById('gen-batch').value;
+    const from   = document.getElementById('gen-from').value;
+    const to     = document.getElementById('gen-to').value;
+    const batch  = document.getElementById('gen-batch').value;
 
     if (!from || !to) {
-        result.textContent    = 'Please select a date range.';
-        result.style.cssText  = 'display:block; font-size:13px; padding:10px 12px; border-radius:8px; background:#fefce8; color:#854d0e;';
+        result.textContent = 'Please select a date range.';
+        result.className   = 'text-sm px-3 py-2.5 rounded-lg bg-yellow-50 text-yellow-700';
+        result.classList.remove('hidden');
         return;
     }
 
-    btn.textContent  = 'Generating…';
-    btn.disabled     = true;
-    result.style.display  = 'none';
-    details.style.display = 'none';
+    btn.textContent = 'Generating…';
+    btn.disabled    = true;
+    result.classList.add('hidden');
+    details.classList.add('hidden');
 
     try {
         const res  = await fetch("{{ route('sessions.generate') }}", {
             method:  'POST',
-            headers: { 'Content-Type':'application/json', 'X-CSRF-TOKEN':CSRF, 'Accept':'application/json' },
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': CSRF, 'Accept': 'application/json' },
             body:    JSON.stringify({ from, to, batch_id: batch || null }),
         });
+
         const data = await res.json();
 
         if (!res.ok) {
-            result.textContent   = data.message || 'Validation error.';
-            result.style.cssText = 'display:block; font-size:13px; padding:10px 12px; border-radius:8px; background:#fef2f2; color:#b91c1c;';
+            result.textContent = data.message || 'Validation error.';
+            result.className   = 'text-sm px-3 py-2.5 rounded-lg bg-red-50 text-red-600';
         } else {
-            result.textContent   = data.message;
-            result.style.cssText = data.created > 0
-                ? 'display:block; font-size:13px; font-weight:500; padding:10px 12px; border-radius:8px; background:#f0fdf4; color:#15803d;'
-                : 'display:block; font-size:13px; padding:10px 12px; border-radius:8px; background:#f9fafb; color:#6b7280;';
+            result.textContent = data.message;
+            result.className   = data.created > 0
+                ? 'text-sm px-3 py-2.5 rounded-lg bg-green-50 text-green-700 font-medium'
+                : 'text-sm px-3 py-2.5 rounded-lg bg-gray-50 text-gray-600';
 
-            // Per-batch breakdown
-            if (data.details && data.details.length) {
+            // Show per-batch breakdown
+            if (data.details && data.details.length > 0) {
                 details.innerHTML = data.details.map(d => `
-                    <div style="display:flex; justify-content:space-between; align-items:center;
-                                font-size:12px; padding:5px 0; border-bottom:1px solid #f3f4f6;">
-                        <span style="color:#374151;">${d.batch}</span>
-                        <span style="font-weight:${d.created > 0 ? '600' : '400'};
-                                     color:${d.created > 0 ? '#16a34a' : (d.status !== 'ok' ? '#d97706' : '#9ca3af')};">
-                            ${d.status === 'ok'
-                                ? (d.created > 0 ? '+' + d.created + ' created' : 'Already exists')
-                                : (d.reason || 'Skipped')}
-                        </span>
+                    <div class="flex items-center justify-between text-xs py-1 border-b border-gray-50 last:border-0">
+                        <span class="text-gray-600">${d.batch}</span>
+                        ${d.status === 'ok'
+                            ? `<span class="${d.created > 0 ? 'text-green-600 font-semibold' : 'text-gray-400'}">${d.created > 0 ? '+' + d.created + ' created' : 'Already exists'}</span>`
+                            : `<span class="text-yellow-600">${d.reason}</span>`
+                        }
                     </div>`).join('');
-                details.style.cssText = 'display:block; margin-top:4px;';
+                details.classList.remove('hidden');
             }
 
+            // Refresh the DataTable if sessions were created
             if (data.created > 0) {
                 dtSessions.ajax.reload(null, false);
             }
         }
+
+        result.classList.remove('hidden');
+
     } catch(e) {
-        result.textContent   = 'Request failed. Please try again.';
-        result.style.cssText = 'display:block; font-size:13px; padding:10px 12px; border-radius:8px; background:#fef2f2; color:#b91c1c;';
+        result.textContent = 'Request failed. Please try again.';
+        result.className   = 'text-sm px-3 py-2.5 rounded-lg bg-red-50 text-red-600';
+        result.classList.remove('hidden');
     }
 
     btn.textContent = 'Generate';
