@@ -23,7 +23,17 @@ class AttendanceController extends Controller
         $presentCount  = $existing->where('status', 'present')->count();
         $lateCount     = $existing->where('status', 'late')->count();
         $absentCount   = $existing->where('status', 'absent')->count();
-        $totalStudents = Student::where('batch_id', $session->batch_id)->active()->count();
+        $totalStudents = Student::withTrashed()
+        ->where('batch_id', $session->batch_id)
+        ->where(function ($q) use ($session) {
+            $q->whereNull('joined_at')
+            ->orWhere('joined_at', '<=', $session->session_date);
+        })
+        ->where(function ($q) use ($session) {
+            $q->whereNull('deleted_at')
+            ->orWhere('deleted_at', '>', $session->session_date);
+        })
+        ->count();
         $isSaved       = $session->isAttendanceSaved();
 
         return view('attendance.index', compact(
@@ -37,12 +47,23 @@ class AttendanceController extends Controller
     {
         $this->authorizeSession($session);
 
+        $sessionDate = $session->session_date;
+
         // Cache the student list (photo URLs, names, etc.) — invalidated on student change
         $students = Cache::remember(
-            "batch_students_{$session->batch_id}",
+           "batch_students_{$session->batch_id}_{$sessionDate->toDateString()}",
             now()->addMinutes(10),
-            fn() => Student::where('batch_id', $session->batch_id)
+                fn() => Student::withTrashed()->where('batch_id', $session->batch_id)
                 ->active()
+                ->where(function ($query) use ($sessionDate) {
+                    $query->whereNull('joined_at')
+                        ->orWhere('joined_at', '<=', $sessionDate);
+                })
+                ->where(function ($q) use ($sessionDate) {
+                    // Was NOT yet deleted on session date
+                    $q->whereNull('deleted_at')
+                    ->orWhere('deleted_at', '>', $sessionDate);
+                })
                 ->orderBy('full_name')
                 ->get()
                 ->map(fn($s) => [
@@ -80,6 +101,15 @@ class AttendanceController extends Controller
             'note'       => 'nullable|string|max:200',
         ]);
 
+        // Verify student was enrolled on session date
+        $student = Student::find($request->student_id);
+        if ($student->joined_at && $student->joined_at->gt($session->session_date)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Student was not enrolled on this session date.',
+            ], 422);
+        }
+
         $record = Attendance::updateOrCreate(
             ['session_id' => $session->id, 'student_id' => $request->student_id],
             ['status' => $request->status, 'note' => $request->note, 'marked_at' => now()]
@@ -104,8 +134,21 @@ class AttendanceController extends Controller
             'attendance.*.note'   => 'nullable|string|max:200',
         ]);
 
+        // Only allow saving attendance for students enrolled on session date
+        $sessionDate        = $session->session_date;
+        $eligibleStudentIds = Student::where('batch_id', $session->batch_id)
+            ->active()
+            ->where(function ($q) use ($sessionDate) {
+                $q->whereNull('joined_at')
+                ->orWhere('joined_at', '<=', $sessionDate);
+            })
+            ->pluck('id')
+            ->toArray();
+
         DB::transaction(function () use ($request, $session) {
             foreach ($request->attendance as $record) {
+                // Skip students not enrolled on this session date
+                if (!in_array($record['id'], $eligibleStudentIds)) continue;
                 Attendance::updateOrCreate(
                     ['session_id' => $session->id, 'student_id' => $record['id']],
                     [
@@ -131,7 +174,12 @@ class AttendanceController extends Controller
         $request->validate(['status' => 'required|in:present,absent']);
 
         $studentIds = Student::where('batch_id', $session->batch_id)
-            ->active()->pluck('id');
+        ->active()
+        ->where(function ($query) use ($session) {
+            $query->whereNull('joined_at')
+                ->orWhere('joined_at', '<=', $session->session_date);
+        })
+        ->pluck('id');
 
         DB::transaction(function () use ($studentIds, $session, $request) {
             foreach ($studentIds as $studentId) {
@@ -153,7 +201,17 @@ class AttendanceController extends Controller
     private function getSummary(TrainingSession $session): array
     {
         $records = Attendance::where('session_id', $session->id)->get();
-        $total   = Student::where('batch_id', $session->batch_id)->active()->count();
+        $total = Student::withTrashed()
+            ->where('batch_id', $session->batch_id)
+            ->where(function ($q) use ($session) {
+                $q->whereNull('joined_at')
+                ->orWhere('joined_at', '<=', $session->session_date);
+            })
+            ->where(function ($q) use ($session) {
+                $q->whereNull('deleted_at')
+                ->orWhere('deleted_at', '>', $session->session_date);
+            })
+            ->count();
         $present = $records->where('status', 'present')->count();
         $late    = $records->where('status', 'late')->count();
         $absent  = $records->where('status', 'absent')->count();

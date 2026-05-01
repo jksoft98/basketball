@@ -152,7 +152,10 @@
                         ['route'=>'students.index', 'label'=>'Students'],
                         ['route'=>'sessions.index', 'label'=>'Sessions'],
                     ];
-                    if(auth()->user()->isAdmin()) $navLinks[] = ['route'=>'reports.index','label'=>'Reports'];
+                   if(auth()->user()->isAdmin()) {
+                       $navLinks[] = ['route' => 'users.index',   'label' => 'Users'];
+                       $navLinks[] = ['route' => 'reports.index',  'label' => 'Reports'];
+                   }
                 @endphp
                 @foreach($navLinks as $link)
                 <a href="{{ route($link['route']) }}"
@@ -164,11 +167,15 @@
             </div>
             <div class="flex items-center gap-3">
                 <span class="hidden sm:block text-sm text-gray-300">
-                    {{ auth()->user()->name }}
+                    <!-- {{ auth()->user()->name }} -->
                     <span class="ml-1 text-xs px-2 py-0.5 rounded-full {{ auth()->user()->isAdmin() ? 'bg-orange-500' : 'bg-gray-600' }}">
                         {{ ucfirst(auth()->user()->role) }}
                     </span>
                 </span>
+                <a href="{{ route('profile') }}"
+                   class="text-sm text-gray-400 hover:text-white transition-colors hidden sm:block">
+                    Profile
+                </a>
                 {{-- Logout hidden on mobile, shown on sm+ --}}
                 <form method="POST" action="{{ route('logout') }}" class="hidden sm:block">
                     @csrf

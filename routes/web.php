@@ -8,6 +8,7 @@ use App\Http\Controllers\SessionController;
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\DataTableController;
+use App\Http\Controllers\UserController;
 
 Route::get('/', fn() => redirect()->route('dashboard'));
 
@@ -55,14 +56,22 @@ Route::middleware(['auth'])->group(function () {
     Route::patch('sessions/{session}/attendance/mark-all',
         [AttendanceController::class, 'markAll'])->name('attendance.mark-all');
 
-  
 
+
+    // ── Profile (any logged-in user) ──────────────────────────────
+    Route::get('profile',  [UserController::class, 'profile'])->name('profile');
+    Route::put('profile',  [UserController::class, 'updateProfile'])->name('profile.update');
+
+    
     // Reports (admin only)
     Route::middleware([\App\Http\Middleware\RoleMiddleware::class.':admin'])->group(function () {
         Route::get('reports',                   [ReportController::class, 'index'])->name('reports.index');
         Route::get('reports/student/{student}', [ReportController::class, 'student'])->name('reports.student');
         Route::get('reports/session/{session}', [ReportController::class, 'session'])->name('reports.session');
         Route::get('reports/export',            [ReportController::class, 'export'])->name('reports.export');
+
+        // ── User management (admin only — controller handles 403) ─────
+        Route::resource('users', UserController::class)->except(['show']);
     });
 });
 

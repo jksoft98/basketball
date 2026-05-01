@@ -44,6 +44,7 @@ class StudentController extends Controller
                     'injury_status' => $s->injury_status,
                     'is_at_risk'    => $s->isAtRisk(),
                     'edit_url'      => route('students.edit', $s),
+                    'history_url'   => route('reports.student', $s),
                 ]),
                 'total'    => $students->total(),
                 'has_more' => $students->hasMorePages(),
@@ -76,6 +77,7 @@ class StudentController extends Controller
             'skill_level'    => 'required|in:beginner,intermediate,advanced',
             'injury_status'  => 'required|in:fit,injured,recovering',
             'photo'          => 'required|image|mimes:jpeg,jpg,png,webp|max:5120',
+            'joined_at'      => 'nullable|date',
         ]);
 
         [$photoPath, $thumbPath] = $this->imageService->storeStudentPhoto($request->file('photo'));
@@ -118,6 +120,7 @@ class StudentController extends Controller
             'skill_level'    => 'required|in:beginner,intermediate,advanced',
             'injury_status'  => 'required|in:fit,injured,recovering',
             'photo'          => 'nullable|image|mimes:jpeg,jpg,png,webp|max:5120',
+            'joined_at'      => 'nullable|date',
         ]);
 
         if ($request->hasFile('photo')) {
@@ -140,12 +143,28 @@ class StudentController extends Controller
     public function destroy(Student $student)
     {
         $this->authorizeStudent($student);
-        $this->imageService->deleteStudentPhoto($student->photo_path, $student->photo_thumb_path);
+        //$this->imageService->deleteStudentPhoto($student->photo_path, $student->photo_thumb_path);
         Cache::forget("batch_students_{$student->batch_id}");
+
+        // Invalidate all cached grids for this batch
+        // (one entry exists per session date so we clear by pattern)
+        $pattern = "batch_students_{$student->batch_id}_*";
+
+        // For file/array cache driver — clear by tagged prefix isn't supported
+        // so we clear today's cache key specifically (the most critical one)
+        Cache::forget("batch_students_{$student->batch_id}_" . now()->toDateString());
+
+        // Also clear any future session date caches that may have been loaded
+        foreach (\App\Models\TrainingSession::where('batch_id', $student->batch_id)
+            ->whereDate('session_date', '>=', now())
+            ->pluck('session_date') as $date) {
+            Cache::forget("batch_students_{$student->batch_id}_{$date->toDateString()}");
+        }
+
         $student->delete();
 
         return redirect()->route('students.index')
-            ->with('success', 'Student removed.');
+        ->with('success', 'Student removed. Their attendance history is preserved.');
     }
 
     public function toggleStatus(Student $student)

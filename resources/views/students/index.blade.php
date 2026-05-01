@@ -63,6 +63,7 @@
             @if($student->jersey_number)<span class="absolute bottom-1.5 left-1.5 text-[9px] font-bold bg-black/55 text-white px-1.5 py-0.5 rounded">#{{ $student->jersey_number }}</span>@endif
             <div class="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-all flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
                 <a href="{{ route('students.edit', $student) }}" class="text-[11px] bg-white text-gray-800 px-2 py-1 rounded font-medium hover:bg-orange-500 hover:text-white transition-colors">Edit</a>
+                <a href="{{ route('reports.student', $student) }}" class="text-[11px] bg-white text-gray-800 px-2 py-1 rounded font-medium hover:bg-orange-500 hover:text-white transition-colors">History</a>
             </div>
         </div>
         <div class="p-2.5">
@@ -150,6 +151,7 @@ function renderStudents(students) {
                 ${s.jersey_number ? `<span class="absolute bottom-1.5 left-1.5 text-[9px] font-bold bg-black/55 text-white px-1.5 py-0.5 rounded">#${s.jersey_number}</span>` : ''}
                 <div class="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-all flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
                     <a href="${s.edit_url}" class="text-[11px] bg-white text-gray-800 px-2 py-1 rounded font-medium hover:bg-orange-500 hover:text-white transition-colors">Edit</a>
+                    <a href="${s.history_url}" class="text-[11px] bg-white text-gray-800 px-2 py-1 rounded font-medium hover:bg-orange-500 hover:text-white transition-colors">History</a>
                 </div>
             </div>
             <div class="p-2.5">

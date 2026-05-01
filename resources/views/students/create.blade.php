@@ -92,6 +92,17 @@
                     <input type="text" name="parent_contact" value="{{ old('parent_contact') }}" class="w-full h-10 px-3 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-orange-400 bg-white">
                 </div>
             </div>
+            <div class="sm:col-span-2">
+                <label class="block text-xs font-medium text-gray-600 mb-1.5">
+                    Joining Date
+                </label>
+                <input type="date" name="joined_at"
+                    value="{{ old('joined_at', now()->format('Y-m-d')) }}"
+                    class="w-full h-9 px-3 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-orange-400 bg-white" required>
+                <p class="text-xs text-gray-400 mt-1">
+                    Student will not appear in sessions before this date.
+                </p>
+            </div>
         </div>
         <div class="flex gap-3">
             <button type="submit" class="flex-1 bg-orange-500 hover:bg-orange-600 text-white font-semibold py-3 rounded-xl transition-colors">Add Student</button>

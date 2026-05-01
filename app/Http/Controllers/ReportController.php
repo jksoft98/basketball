@@ -72,8 +72,15 @@ class ReportController extends Controller {
     public function student(Student $student, Request $request) {
         $month = $request->input('month', now()->format('Y-m'));
         [$year,$mon] = explode('-', $month);
-        $sessions = TrainingSession::where('batch_id',$student->batch_id)
-            ->whereYear('session_date',$year)->whereMonth('session_date',$mon)->latest('session_date')->get();
+        $sessions = TrainingSession::where('batch_id', $student->batch_id)
+        ->whereYear('session_date', $year)
+        ->whereMonth('session_date', $mon)
+        ->when($student->joined_at, fn($q) =>
+            $q->whereDate('session_date', '>=', $student->joined_at)
+        )
+        ->latest('session_date')->get();
+
+
         $attendanceMap = Attendance::where('student_id',$student->id)
             ->whereIn('session_id',$sessions->pluck('id'))->get()->keyBy('session_id');
         $allTime = [
@@ -89,7 +96,17 @@ class ReportController extends Controller {
 
     public function session(TrainingSession $session) {
         $session->load(['batch','batch.coach','attendances.student']);
-        $students      = Student::where('batch_id',$session->batch_id)->active()->get();
+        $students = Student::withTrashed()
+        ->where('batch_id', $session->batch_id)
+        ->where(function ($q) use ($session) {
+            $q->whereNull('joined_at')
+            ->orWhere('joined_at', '<=', $session->session_date);
+        })
+        ->where(function ($q) use ($session) {
+            $q->whereNull('deleted_at')
+            ->orWhere('deleted_at', '>', $session->session_date);
+        })
+        ->get();
         $attendanceMap = $session->attendances->keyBy('student_id');
         $summary = [
             'present'=>$session->attendances->where('status','present')->count(),
@@ -105,7 +122,25 @@ class ReportController extends Controller {
         [$year,$mon] = explode('-', $request->month);
         $batch    = Batch::findOrFail($request->batch_id);
         $sessions = TrainingSession::where('batch_id',$batch->id)->whereYear('session_date',$year)->whereMonth('session_date',$mon)->orderBy('session_date')->get();
-        $students = Student::where('batch_id',$batch->id)->active()->orderBy('full_name')->get();
+        
+        $endOfMonth   = \Carbon\Carbon::createFromFormat('Y-m', $request->month)->endOfMonth();
+        $startOfMonth = \Carbon\Carbon::createFromFormat('Y-m', $request->month)->startOfMonth();
+
+        $students = Student::withTrashed()
+        ->where('batch_id', $batch->id)
+        ->where(function ($q) use ($endOfMonth) {
+            // Joined before end of month
+            $q->whereNull('joined_at')
+            ->orWhere('joined_at', '<=', $endOfMonth);
+        })
+        ->where(function ($q) use ($startOfMonth) {
+            // Not deleted before the month started
+            $q->whereNull('deleted_at')
+            ->orWhere('deleted_at', '>=', $startOfMonth);
+        })
+        ->orderBy('full_name')
+        ->get();
+        
         $filename = 'attendance_'.str_replace([' ','/'],'_',$batch->name)."_{$request->month}.csv";
         return response()->stream(function() use ($sessions,$students) {
             $handle = fopen('php://output','w');

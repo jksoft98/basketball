@@ -83,7 +83,18 @@ class DataTableController extends Controller
 
         $data = $sessions->map(function ($session) use ($typeColors) {
             $saved   = $session->isAttendanceSaved();
-            $total   = $session->batch->students()->active()->count();
+            // Only count students who were enrolled on the session date
+            $total = Student::withTrashed()
+            ->where('batch_id', $session->batch_id)
+            ->where(function ($q) use ($session) {
+                $q->whereNull('joined_at')
+                ->orWhere('joined_at', '<=', $session->session_date);
+            })
+            ->where(function ($q) use ($session) {
+                $q->whereNull('deleted_at')
+                ->orWhere('deleted_at', '>', $session->session_date);
+            })
+            ->count();
             $present = $session->presentCount();
             $pct     = $total > 0 ? round(($present / $total) * 100) : 0;
             $isToday = $session->session_date->isToday();
@@ -311,7 +322,16 @@ class DataTableController extends Controller
     // ── Report: attendance for one session ─────────────────────────
     public function sessionAttendance(Request $request, TrainingSession $session)
     {
-        $query = Student::where('batch_id', $session->batch_id)->active();
+        $query = Student::withTrashed()
+        ->where('batch_id', $session->batch_id)
+        ->where(function ($q) use ($session) {
+            $q->whereNull('joined_at')
+            ->orWhere('joined_at', '<=', $session->session_date);
+        })
+        ->where(function ($q) use ($session) {
+            $q->whereNull('deleted_at')
+            ->orWhere('deleted_at', '>', $session->session_date);
+        });
 
         if ($search = $request->input('search.value')) {
             $query->where('full_name', 'like', "%{$search}%");
@@ -393,8 +413,11 @@ class DataTableController extends Controller
         [$year, $mon] = explode('-', $month);
 
         $query = TrainingSession::where('batch_id', $student->batch_id)
-            ->whereYear('session_date', $year)
-            ->whereMonth('session_date', $mon);
+        ->whereYear('session_date', $year)
+        ->whereMonth('session_date', $mon)
+        ->when($student->joined_at, fn($q) =>
+            $q->whereDate('session_date', '>=', $student->joined_at)
+        );
 
         if ($search = $request->input('search.value')) {
             $query->where('session_type', 'like', "%{$search}%");

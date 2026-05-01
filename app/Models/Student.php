@@ -2,18 +2,19 @@
 namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\Storage;
 
 class Student extends Model {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
     protected $fillable = [
-        'batch_id', 'full_name', 'age', 'parent_name', 'parent_contact',
-        'photo_path', 'photo_thumb_path', 'jersey_number', 'position',
-        'skill_level', 'injury_status', 'is_active',
+    'batch_id', 'full_name', 'age', 'parent_name', 'parent_contact',
+    'photo_path', 'photo_thumb_path', 'jersey_number', 'position',
+    'skill_level', 'injury_status', 'is_active', 'joined_at',
     ];
-    protected $casts = ['is_active' => 'boolean'];
+    protected $casts = ['is_active' => 'boolean', 'joined_at' => 'date'];
 
     public function batch(): BelongsTo { return $this->belongsTo(Batch::class); }
     public function attendances(): HasMany { return $this->hasMany(Attendance::class); }
@@ -30,16 +31,49 @@ class Student extends Model {
             : Storage::disk('public')->url($this->photo_path);
     }
 
-    public function attendancePercentage(): float {
-        $total = $this->attendances()->count();
+    public function attendancePercentage(): float
+    {
+        $query = $this->attendances();
+
+        // Only count sessions from joining date onwards
+        if ($this->joined_at) {
+            $query = $query->whereHas('session', function ($q) {
+                $q->whereDate('session_date', '>=', $this->joined_at);
+            });
+        }
+
+        // Only count sessions before the student was deleted
+        if ($this->deleted_at) {
+            $query = $query->whereHas('session', function ($q) {
+                $q->whereDate('session_date', '<=', $this->deleted_at);
+            });
+        }
+
+        $total = $query->count();
         if ($total === 0) return 100.0;
-        $present = $this->attendances()->whereIn('status', ['present', 'late'])->count();
+
+        $present = (clone $query)
+            ->whereIn('status', ['present', 'late'])
+            ->count();
+
         return round(($present / $total) * 100, 1);
     }
 
-    public function isAtRisk(): bool {
-        $total = $this->attendances()->count();
-        if ($total < 3) return false;
+    public function isAtRisk(): bool
+    {
+        // A deleted student is never flagged as at-risk
+        if ($this->deleted_at) return false;
+
+        $query = $this->attendances();
+
+        if ($this->joined_at) {
+            $query = $query->whereHas('session', function ($q) {
+                $q->whereDate('session_date', '>=', $this->joined_at);
+            });
+        }
+
+        if ($query->count() < 3) return false;
+
         return $this->attendancePercentage() < 75;
     }
 }

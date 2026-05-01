@@ -79,6 +79,18 @@
                     <label class="block text-xs font-medium text-gray-600 mb-1.5">Contact Number</label>
                     <input type="text" name="parent_contact" value="{{ old('parent_contact', $student->parent_contact) }}" class="w-full h-10 px-3 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-orange-400 bg-white">
                 </div>
+                <div class="sm:col-span-2">
+                    <label class="block text-xs font-medium text-gray-600 mb-1.5">
+                        Joining Date
+                    </label>
+                    <input type="date" name="joined_at"
+                        value="{{ old('joined_at', $student->joined_at?->format('Y-m-d') ?? now()->format('Y-m-d')) }}"
+                        class="w-full h-9 px-3 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-orange-400 bg-white" required>
+                    <p class="text-xs text-gray-400 mt-1">
+                        Student will not appear in sessions before this date.
+                    </p>
+                </div>
+
             </div>
         </div>
         <div class="flex gap-3">

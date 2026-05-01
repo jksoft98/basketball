@@ -28,7 +28,11 @@
         <div class="flex items-center justify-between py-3" data-session="{{ $session->id }}">
             <div>
                 <div class="font-medium text-gray-900 text-sm">{{ $session->batch->name }}</div>
-                <div class="text-xs text-gray-500 mt-0.5">{{ ucfirst($session->session_type) }} · {{ $session->session_time ? \Carbon\Carbon::parse($session->session_time)->format('g:i A') : 'No time set' }} · {{ $session->batch->students()->active()->count() }} students</div>
+                <div class="text-xs text-gray-500 mt-0.5">{{ ucfirst($session->session_type) }} · {{ $session->session_time ? \Carbon\Carbon::parse($session->session_time)->format('g:i A') : 'No time set' }} · {{ $session->batch->students()->active()
+                    ->where(function($q) use ($session) {
+                        $q->whereNull('joined_at')
+                        ->orWhere('joined_at', '<=', $session->session_date);
+                    })->count() }} students</div>
             </div>
             <div class="flex items-center gap-3">
                 @if($session->isAttendanceSaved())
