@@ -79,6 +79,6 @@ class DashboardController extends Controller
     {
         return $user->isAdmin()
             ? Batch::pluck('id')
-            : Batch::where('coach_id', $user->id)->pluck('id');
+            : $user->batches()->pluck('batches.id');
     }
 }

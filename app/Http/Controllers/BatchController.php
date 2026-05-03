@@ -14,10 +14,9 @@ class BatchController extends Controller
     {
         $user = auth()->user();
 
-        $batches = $user->isAdmin()
-            ? Batch::with(['coach', 'activeSchedules'])->withCount('students')->latest()->get()
-            : Batch::where('coach_id', $user->id)
-                   ->with(['coach', 'activeSchedules'])->withCount('students')->latest()->get();
+        $batches = $user->isAdmin()                                          // ← Change 1
+            ? Batch::with(['coaches', 'activeSchedules'])->withCount('students')->latest()->get()
+            : $user->batches()->with(['coaches', 'activeSchedules'])->withCount('students')->latest()->get();
 
         return view('batches.index', compact('batches'));
     }
@@ -34,23 +33,27 @@ class BatchController extends Controller
         $this->requireAdmin();
 
         $validated = $request->validate([
-            'name'        => 'required|string|max:100',
-            'description' => 'nullable|string|max:255',
-            'coach_id'    => 'required|exists:users,id',
-            'skill_level' => 'required|in:beginner,intermediate,advanced',
-            // Schedules
-            'schedules'                    => 'nullable|array',
-            'schedules.*.day_of_week'      => 'required|integer|between:0,6',
-            'schedules.*.session_time'     => 'required|date_format:H:i',
-            'schedules.*.session_type'     => 'required|in:training,match,fitness,trial',
+            'name'                     => 'required|string|max:100',
+            'description'              => 'nullable|string|max:255',
+            'coach_ids'                => 'required|array|min:1',
+            'coach_ids.*'              => 'exists:users,id',
+            'skill_level'              => 'required|in:beginner,intermediate,advanced',
+            'schedules'                => 'nullable|array',
+            'schedules.*.day_of_week'  => 'required|integer|between:0,6',
+            'schedules.*.session_time' => 'required|date_format:H:i',
+            'schedules.*.session_type' => 'required|in:training,match,fitness,trial',
         ]);
 
         $batch = Batch::create([
             'name'        => $validated['name'],
             'description' => $validated['description'] ?? null,
-            'coach_id'    => $validated['coach_id'],
             'skill_level' => $validated['skill_level'],
         ]);
+
+        // Attach selected coaches
+        if (!empty($validated['coach_ids'])) {
+            $batch->coaches()->sync($validated['coach_ids']);
+        }
 
         // Save schedules
         if (!empty($validated['schedules'])) {
@@ -64,9 +67,10 @@ class BatchController extends Controller
     public function edit(Batch $batch)
     {
         $this->requireAdmin();
-        $coaches   = User::where('role', 'coach')->orderBy('name')->get();
-        $schedules = $batch->schedules()->orderBy('day_of_week')->get();
-        return view('batches.edit', compact('batch', 'coaches', 'schedules'));
+        $coaches          = User::where('role', 'coach')->orderBy('name')->get();
+        $schedules        = $batch->schedules()->orderBy('day_of_week')->get();
+        $assignedCoachIds = $batch->coaches()->pluck('users.id')->toArray(); // ← Change 3
+        return view('batches.edit', compact('batch', 'coaches', 'schedules', 'assignedCoachIds'));
     }
 
     public function update(Request $request, Batch $batch)
@@ -74,29 +78,33 @@ class BatchController extends Controller
         $this->requireAdmin();
 
         $validated = $request->validate([
-            'name'        => 'required|string|max:100',
-            'description' => 'nullable|string|max:255',
-            'coach_id'    => 'required|exists:users,id',
-            'skill_level' => 'required|in:beginner,intermediate,advanced',
-            'is_active'   => 'boolean',
-            // Schedules
-            'schedules'                    => 'nullable|array',
-            'schedules.*.day_of_week'      => 'required|integer|between:0,6',
-            'schedules.*.session_time'     => 'required|date_format:H:i',
-            'schedules.*.session_type'     => 'required|in:training,match,fitness,trial',
+            'name'                     => 'required|string|max:100',
+            'description'              => 'nullable|string|max:255',
+            'coach_ids'                => 'required|array|min:1',
+            'coach_ids.*'              => 'exists:users,id',
+            'skill_level'              => 'required|in:beginner,intermediate,advanced',
+            'is_active'                => 'boolean',
+            'schedules'                => 'nullable|array',
+            'schedules.*.day_of_week'  => 'required|integer|between:0,6',
+            'schedules.*.session_time' => 'required|date_format:H:i',
+            'schedules.*.session_type' => 'required|in:training,match,fitness,trial',
         ]);
 
         $batch->update([
             'name'        => $validated['name'],
             'description' => $validated['description'] ?? null,
-            'coach_id'    => $validated['coach_id'],
             'skill_level' => $validated['skill_level'],
             'is_active'   => $validated['is_active'] ?? $batch->is_active,
         ]);
 
+        // Sync coaches
+        if (!empty($validated['coach_ids'])) {
+            $batch->coaches()->sync($validated['coach_ids']);
+        }
+
         // Replace all schedules with new ones
         $batch->schedules()->delete();
-        if (!empty($validated['schedules'])) {
+        if (!empty($validated['schedules'])) {   // ← Change 2 (bug fix)
             $this->saveSchedules($batch, $validated['schedules']);
         }
 
@@ -114,6 +122,7 @@ class BatchController extends Controller
         }
 
         $batch->schedules()->delete();
+        $batch->coaches()->detach(); // detach from pivot before deleting
         $batch->delete();
 
         return redirect()->route('batches.index')
@@ -129,7 +138,6 @@ class BatchController extends Controller
             'batch_id' => 'nullable|exists:batches,id',
         ]);
 
-        // Prevent generating more than 3 months at once
         $from = \Carbon\Carbon::parse($request->from);
         $to   = \Carbon\Carbon::parse($request->to);
 

@@ -19,14 +19,23 @@
                 <input type="text" name="description" value="{{ old('description') }}" class="w-full h-10 px-3 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-orange-400 bg-white" placeholder="Optional short description">
             </div>
             <div>
-                <label class="block text-xs font-medium text-gray-600 mb-1.5">Assign Coach <span class="text-red-500">*</span></label>
-                <select name="coach_id" class="w-full h-10 px-3 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-orange-400 bg-white" required>
-                    <option value="">Select a coach</option>
+                <label class="block text-xs font-medium text-gray-600 mb-1.5">
+                    Assign Coaches <span class="text-red-500">*</span>
+                    <span class="text-gray-400 font-normal">(select one or more)</span>
+                </label>
+                <div class="space-y-2 border border-gray-200 rounded-lg p-3 max-h-48 overflow-y-auto">
                     @foreach($coaches as $coach)
-                    <option value="{{ $coach->id }}" {{ old('coach_id')==$coach->id ? 'selected' : '' }}>{{ $coach->name }}</option>
+                    <label class="flex items-center gap-2.5 cursor-pointer hover:bg-gray-50 px-2 py-1.5 rounded-lg">
+                        <input type="checkbox" name="coach_ids[]" value="{{ $coach->id }}"
+                            {{ in_array($coach->id, old('coach_ids', [])) ? 'checked' : '' }}
+                            class="w-4 h-4 accent-orange-500 rounded">
+                        <span class="text-sm text-gray-700">{{ $coach->name }}</span>
+                    </label>
                     @endforeach
-                </select>
-                @error('coach_id')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
+                </div>
+                @error('coach_ids')
+                <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                @enderror
             </div>
             <div>
                 <label class="block text-xs font-medium text-gray-600 mb-1.5">Skill Level <span class="text-red-500">*</span></label>

@@ -128,7 +128,7 @@
             @foreach($batchStats as $batch)
             <tr class="hover:bg-gray-50 transition-colors">
                 <td class="py-3 font-medium text-gray-900">{{ $batch->name }}</td>
-                <td class="py-3 text-gray-500">{{ $batch->coach->name ?? '—' }}</td>
+                <td class="py-3 text-gray-500">{{ $batch->coaches->pluck('name')->join(', ') ?: '—' }}</td>
                 <td class="py-3 text-center text-gray-700">{{ $batch->students_count }}</td>
                 <td class="py-3 text-center text-gray-700">{{ $batch->session_count }}</td>
                 <td class="py-3">

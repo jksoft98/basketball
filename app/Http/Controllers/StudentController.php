@@ -15,9 +15,9 @@ class StudentController extends Controller
     public function index(Request $request)
     {
         $user     = auth()->user();
-        $batchIds = $user->isAdmin()
+        $batchIds = $user->isAdmin()                          // ← Change 1
             ? Batch::pluck('id')
-            : Batch::where('coach_id', $user->id)->pluck('id');
+            : $user->batches()->pluck('batches.id');
 
         $query = Student::whereIn('batch_id', $batchIds)->with('batch')->active();
 
@@ -29,15 +29,14 @@ class StudentController extends Controller
         $students = $query->orderBy('full_name')->paginate(24)->withQueryString();
         $batches  = Batch::whereIn('id', $batchIds)->active()->get();
 
-        // AJAX request — return JSON for live search
         if ($request->ajax() || $request->has('ajax')) {
             return response()->json([
                 'students' => $students->map(fn($s) => [
                     'id'            => $s->id,
                     'full_name'     => $s->full_name,
-                    'thumb_url'  => $s->photo_thumb_path
-                                    ? asset('storage/' . $s->photo_thumb_path)
-                                    : asset('images/default-avatar.png'),
+                    'thumb_url'     => $s->photo_thumb_path
+                                        ? asset('storage/' . $s->photo_thumb_path)
+                                        : asset('images/default-avatar.png'),
                     'batch_name'    => $s->batch->name,
                     'jersey_number' => $s->jersey_number,
                     'skill_level'   => $s->skill_level,
@@ -57,9 +56,9 @@ class StudentController extends Controller
     public function create()
     {
         $user    = auth()->user();
-        $batches = $user->isAdmin()
+        $batches = $user->isAdmin()                           // ← Change 2
             ? Batch::active()->get()
-            : Batch::where('coach_id', $user->id)->active()->get();
+            : $user->batches()->active()->get();
 
         return view('students.create', compact('batches'));
     }
@@ -98,9 +97,9 @@ class StudentController extends Controller
     {
         $this->authorizeStudent($student);
         $user    = auth()->user();
-        $batches = $user->isAdmin()
+        $batches = $user->isAdmin()                           // ← Change 3
             ? Batch::active()->get()
-            : Batch::where('coach_id', $user->id)->active()->get();
+            : $user->batches()->active()->get();
 
         return view('students.edit', compact('student', 'batches'));
     }
@@ -143,18 +142,10 @@ class StudentController extends Controller
     public function destroy(Student $student)
     {
         $this->authorizeStudent($student);
-        //$this->imageService->deleteStudentPhoto($student->photo_path, $student->photo_thumb_path);
+
         Cache::forget("batch_students_{$student->batch_id}");
-
-        // Invalidate all cached grids for this batch
-        // (one entry exists per session date so we clear by pattern)
-        $pattern = "batch_students_{$student->batch_id}_*";
-
-        // For file/array cache driver — clear by tagged prefix isn't supported
-        // so we clear today's cache key specifically (the most critical one)
         Cache::forget("batch_students_{$student->batch_id}_" . now()->toDateString());
 
-        // Also clear any future session date caches that may have been loaded
         foreach (\App\Models\TrainingSession::where('batch_id', $student->batch_id)
             ->whereDate('session_date', '>=', now())
             ->pluck('session_date') as $date) {
@@ -164,7 +155,7 @@ class StudentController extends Controller
         $student->delete();
 
         return redirect()->route('students.index')
-        ->with('success', 'Student removed. Their attendance history is preserved.');
+            ->with('success', 'Student removed. Their attendance history is preserved.');
     }
 
     public function toggleStatus(Student $student)
@@ -176,7 +167,6 @@ class StudentController extends Controller
         return back()->with('success', 'Student status updated.');
     }
 
-    // ── AJAX: inline injury status toggle ─────────────────────────
     public function updateInjuryStatus(Request $request, Student $student)
     {
         $this->authorizeStudent($student);
@@ -199,10 +189,10 @@ class StudentController extends Controller
         ]);
     }
 
-    private function authorizeStudent(Student $student): void
+    private function authorizeStudent(Student $student): void  // ← Change 4
     {
         if (auth()->user()->isAdmin()) return;
-        $ownBatchIds = Batch::where('coach_id', auth()->id())->pluck('id');
+        $ownBatchIds = auth()->user()->batches()->pluck('batches.id');
         if (!$ownBatchIds->contains($student->batch_id)) abort(403);
     }
 }

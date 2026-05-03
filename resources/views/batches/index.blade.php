@@ -53,7 +53,7 @@
                 <div class="text-[11px] text-gray-400">Sessions</div>
             </div>
             <div class="text-center flex-1">
-                <div class="text-sm font-medium text-gray-700 truncate">{{ $batch->coach->name ?? '—' }}</div>
+                <div class="text-sm font-medium text-gray-700 truncate">{{ $batch->coaches->pluck('name')->join(', ') ?: '—' }}</div>
                 <div class="text-[11px] text-gray-400">Coach</div>
             </div>
         </div>

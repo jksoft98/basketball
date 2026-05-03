@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use App\Models\User;
 
 class Batch extends Model
 {
@@ -21,9 +23,17 @@ class Batch extends Model
 
     // ── Relationships ──────────────────────────────────────────────
 
-    public function coach(): BelongsTo
+    // Multiple coaches via pivot table
+    public function coaches(): BelongsToMany
     {
-        return $this->belongsTo(User::class, 'coach_id');
+        return $this->belongsToMany(User::class, 'batch_coach')
+                    ->withTimestamps();
+    }
+
+    // Convenience — first coach (for display in tables)
+    public function primaryCoach(): ?User
+    {
+        return $this->coaches()->oldest('batch_coach.created_at')->first();
     }
 
     public function students(): HasMany

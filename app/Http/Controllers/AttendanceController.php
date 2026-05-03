@@ -16,7 +16,7 @@ class AttendanceController extends Controller
     public function index(TrainingSession $session)
     {
         $this->authorizeSession($session);
-        $session->load(['batch', 'batch.coach']);
+        $session->load(['batch', 'batch.coaches']); // ← Change 1
 
         // Count existing attendance for summary bar initial state
         $existing      = Attendance::where('session_id', $session->id)->get();
@@ -24,16 +24,16 @@ class AttendanceController extends Controller
         $lateCount     = $existing->where('status', 'late')->count();
         $absentCount   = $existing->where('status', 'absent')->count();
         $totalStudents = Student::withTrashed()
-        ->where('batch_id', $session->batch_id)
-        ->where(function ($q) use ($session) {
-            $q->whereNull('joined_at')
-            ->orWhere('joined_at', '<=', $session->session_date);
-        })
-        ->where(function ($q) use ($session) {
-            $q->whereNull('deleted_at')
-            ->orWhere('deleted_at', '>', $session->session_date);
-        })
-        ->count();
+            ->where('batch_id', $session->batch_id)
+            ->where(function ($q) use ($session) {
+                $q->whereNull('joined_at')
+                  ->orWhere('joined_at', '<=', $session->session_date);
+            })
+            ->where(function ($q) use ($session) {
+                $q->whereNull('deleted_at')
+                  ->orWhere('deleted_at', '>', $session->session_date);
+            })
+            ->count();
         $isSaved       = $session->isAttendanceSaved();
 
         return view('attendance.index', compact(
@@ -51,31 +51,31 @@ class AttendanceController extends Controller
 
         // Cache the student list (photo URLs, names, etc.) — invalidated on student change
         $students = Cache::remember(
-           "batch_students_{$session->batch_id}_{$sessionDate->toDateString()}",
+            "batch_students_{$session->batch_id}_{$sessionDate->toDateString()}",
             now()->addMinutes(10),
-                fn() => Student::withTrashed()->where('batch_id', $session->batch_id)
-                ->active()
+            fn() => Student::withTrashed()
+                ->where('batch_id', $session->batch_id)
+                ->where('is_active', true)
                 ->where(function ($query) use ($sessionDate) {
                     $query->whereNull('joined_at')
-                        ->orWhere('joined_at', '<=', $sessionDate);
+                          ->orWhere('joined_at', '<=', $sessionDate);
                 })
                 ->where(function ($q) use ($sessionDate) {
-                    // Was NOT yet deleted on session date
                     $q->whereNull('deleted_at')
-                    ->orWhere('deleted_at', '>', $sessionDate);
+                      ->orWhere('deleted_at', '>', $sessionDate);
                 })
                 ->orderBy('full_name')
                 ->get()
                 ->map(fn($s) => [
-                    'id'        => $s->id,
-                    'name'      => $s->full_name,
-                    'jersey'    => $s->jersey_number,
-                    'position'  => $s->position,
-                    'injury'    => $s->injury_status,
+                    'id'         => $s->id,
+                    'name'       => $s->full_name,
+                    'jersey'     => $s->jersey_number,
+                    'position'   => $s->position,
+                    'injury'     => $s->injury_status,
                     'thumb_url'  => $s->photo_thumb_path
                                     ? asset('storage/' . $s->photo_thumb_path)
                                     : asset('images/default-avatar.png'),
-                    'is_at_risk'=> $s->isAtRisk(),
+                    'is_at_risk' => $s->isAtRisk(),
                 ])
         );
 
@@ -110,12 +110,11 @@ class AttendanceController extends Controller
             ], 422);
         }
 
-        $record = Attendance::updateOrCreate(
+        Attendance::updateOrCreate(
             ['session_id' => $session->id, 'student_id' => $request->student_id],
             ['status' => $request->status, 'note' => $request->note, 'marked_at' => now()]
         );
 
-        // Return updated summary counts
         return response()->json([
             'success' => true,
             'summary' => $this->getSummary($session),
@@ -140,15 +139,16 @@ class AttendanceController extends Controller
             ->active()
             ->where(function ($q) use ($sessionDate) {
                 $q->whereNull('joined_at')
-                ->orWhere('joined_at', '<=', $sessionDate);
+                  ->orWhere('joined_at', '<=', $sessionDate);
             })
             ->pluck('id')
             ->toArray();
 
-        DB::transaction(function () use ($request, $session) {
+        DB::transaction(function () use ($request, $session, $eligibleStudentIds) { // ← Change 3 (bug fix)
             foreach ($request->attendance as $record) {
                 // Skip students not enrolled on this session date
                 if (!in_array($record['id'], $eligibleStudentIds)) continue;
+
                 Attendance::updateOrCreate(
                     ['session_id' => $session->id, 'student_id' => $record['id']],
                     [
@@ -174,12 +174,12 @@ class AttendanceController extends Controller
         $request->validate(['status' => 'required|in:present,absent']);
 
         $studentIds = Student::where('batch_id', $session->batch_id)
-        ->active()
-        ->where(function ($query) use ($session) {
-            $query->whereNull('joined_at')
-                ->orWhere('joined_at', '<=', $session->session_date);
-        })
-        ->pluck('id');
+            ->active()
+            ->where(function ($query) use ($session) {
+                $query->whereNull('joined_at')
+                      ->orWhere('joined_at', '<=', $session->session_date);
+            })
+            ->pluck('id');
 
         DB::transaction(function () use ($studentIds, $session, $request) {
             foreach ($studentIds as $studentId) {
@@ -201,15 +201,15 @@ class AttendanceController extends Controller
     private function getSummary(TrainingSession $session): array
     {
         $records = Attendance::where('session_id', $session->id)->get();
-        $total = Student::withTrashed()
+        $total   = Student::withTrashed()
             ->where('batch_id', $session->batch_id)
             ->where(function ($q) use ($session) {
                 $q->whereNull('joined_at')
-                ->orWhere('joined_at', '<=', $session->session_date);
+                  ->orWhere('joined_at', '<=', $session->session_date);
             })
             ->where(function ($q) use ($session) {
                 $q->whereNull('deleted_at')
-                ->orWhere('deleted_at', '>', $session->session_date);
+                  ->orWhere('deleted_at', '>', $session->session_date);
             })
             ->count();
         $present = $records->where('status', 'present')->count();
@@ -225,10 +225,10 @@ class AttendanceController extends Controller
         ];
     }
 
-    private function authorizeSession(TrainingSession $session): void
+    private function authorizeSession(TrainingSession $session): void // ← Change 2
     {
         if (auth()->user()->isAdmin()) return;
-        $ownBatchIds = Batch::where('coach_id', auth()->id())->pluck('id');
+        $ownBatchIds = auth()->user()->batches()->pluck('batches.id');
         if (!$ownBatchIds->contains($session->batch_id)) abort(403);
     }
 }
